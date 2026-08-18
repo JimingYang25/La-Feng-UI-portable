@@ -37,6 +37,7 @@
     return {
       themeColor: s.themeColor || '#8b5cf6',
       themeMode: s.themeMode || 'dark',
+      wallpaper: s.wallpaper !== false,
       emojiHint: s.emojiHint !== false,
       personaHint: s.personaHint !== false,
       diaryHint: s.diaryHint !== false,
@@ -48,6 +49,42 @@
     localStorage.setItem(LS_KEY, JSON.stringify(next));
     return next;
   }
+
+  // ============ 动态壁纸（云端 mp4，默认开；⚙ 可关） ============
+  const WALLPAPER_URL = ASSET_BASE + '/wallpaper.mp4';
+  var wallpaperEl = null;
+  function mountWallpaper() {
+    if (wallpaperEl || !loadSettings().wallpaper) return;
+    wallpaperEl = document.createElement('video');
+    wallpaperEl.src = WALLPAPER_URL;
+    wallpaperEl.loop = true;
+    wallpaperEl.muted = true;
+    wallpaperEl.playsInline = true;
+    wallpaperEl.autoplay = true;
+    wallpaperEl.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;pointer-events:none;';
+    document.body.insertBefore(wallpaperEl, document.body.firstChild);
+    // 桌面/移动自动播放策略：muted 通常可直接播放；失败则显示静态背景
+    var p = wallpaperEl.play();
+    if (p && p.catch) p.catch(() => {});
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && wallpaperEl && loadSettings().wallpaper) wallpaperEl.play().catch(() => {});
+    });
+  }
+  function unmountWallpaper() {
+    if (wallpaperEl) { wallpaperEl.pause(); wallpaperEl.remove(); wallpaperEl = null; }
+  }
+  // 页面就绪后挂载；若页面晚加载（SPA）则等待 root 出现
+  function tryMountWallpaper() {
+    if (!loadSettings().wallpaper) return;
+    const root = document.querySelector('#root');
+    if (root || document.body.childNodes.length > 0) { mountWallpaper(); return; }
+    const ob = new MutationObserver(() => {
+      if (document.querySelector('#root')) { ob.disconnect(); mountWallpaper(); }
+    });
+    ob.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => { ob.disconnect(); mountWallpaper(); }, 4000);
+  }
+  tryMountWallpaper();
 
   // ============ 人设（localStorage 可覆盖，内置默认病娇） ============
   const DEFAULT_PERSONA = '你是用户的病娇学妹。表面上温柔体贴，内心却藏着强烈的占有欲和嫉妒心；会默默关注用户，看到用户和别人互动时会吃醋，说话温柔但偶尔流露出独占欲。请始终以这个人设与用户交流。';
@@ -231,11 +268,17 @@
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = loadSettings()[key] !== undefined ? loadSettings()[key] : true;
-    cb.addEventListener('change', () => { saveSettings({ [key]: cb.checked }); });
+    cb.addEventListener('change', () => {
+      saveSettings({ [key]: cb.checked });
+      if (key === 'wallpaper') { // 动态壁纸开关即时生效
+        if (cb.checked) mountWallpaper(); else unmountWallpaper();
+      }
+    });
     lab.appendChild(cb);
     lab.appendChild(document.createTextNode(labelText));
     settingsPanel.appendChild(lab);
   };
+  mkCheck('动态壁纸', 'wallpaper');
   mkCheck('自动注入（新会话自动填给AI）', 'autoInject');
   mkCheck('表情包提示', 'emojiHint');
   mkCheck('人设提示', 'personaHint');
