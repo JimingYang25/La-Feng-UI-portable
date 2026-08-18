@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拉风 La Feng · 便携版 — 让 DeepSeek 网页拥有灵魂</title>
+<style>
+  :root {
+    --theme: #8b5cf6;
+    --bg: #0b1626;
+    --card: rgba(15,25,40,.92);
+    --text: #e6f1f8;
+    --muted: #93a5b8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+  .bg { position:fixed; inset:0; z-index:-1; background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(139,92,246,.25), transparent 60%),
+    radial-gradient(800px 500px at 10% 110%, rgba(0,179,164,.18), transparent 60%),
+    var(--bg); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
+  header { text-align:center; margin-bottom: 40px; }
+  .logo { font-size: 52px; display:block; margin-bottom: 8px; }
+  h1 { font-size: 34px; background: linear-gradient(90deg,#8b5cf6,#00b3a4); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .slogan { color: var(--muted); margin-top: 8px; font-size: 15px; }
+  .badges { margin-top: 14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .badge { background:rgba(139,92,246,.18); border:1px solid rgba(139,92,246,.4); color:#c9b8ff; padding:3px 12px; border-radius:999px; font-size:12px; }
+
+  .card { background: var(--card); border:1px solid rgba(139,92,246,.25); border-radius:16px; padding:24px; margin-bottom:20px; backdrop-filter: blur(6px); }
+  .card h2 { font-size:20px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .card p, .card li { color:#c3d2e2; font-size:14.5px; }
+  .card ul, .card ol { padding-left:22px; }
+  .card li { margin:6px 0; }
+
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:600; transition: transform .15s, box-shadow .2s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139,92,246,.4); }
+  .btn-primary { background: linear-gradient(90deg,#8b5cf6,#00b3a4); color:#fff; }
+  .btn-ghost { background: rgba(255,255,255,.08); color: var(--text); border:1px solid #3a4a63; }
+
+  .steps { counter-reset: step; }
+  .steps li { list-style:none; position:relative; padding-left:44px; }
+  .steps li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:0; width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#00b3a4); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+
+  .emoji-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap:10px; margin-top:10px; }
+  .emoji-grid img { width:100%; aspect-ratio:1; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.05); padding:6px; transition: transform .15s; }
+  .emoji-grid img:hover { transform: scale(1.1); }
+
+  .features { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:12px; }
+  .feature { background:rgba(255,255,255,.04); border-radius:12px; padding:14px; text-align:center; }
+  .feature .ic { font-size:26px; }
+  .feature .nm { font-size:13px; font-weight:600; margin-top:6px; }
+  .feature .ds { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  footer { text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+  footer a { color:#c9b8ff; text-decoration:none; }
+  .toast { position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(80px); background:#1b2b42; border:1px solid rgba(139,92,246,.5); color:#fff; padding:12px 24px; border-radius:10px; font-size:14px; transition: transform .3s; z-index:999; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  pre.code { background:#0a1424; border:1px solid #22334d; border-radius:10px; padding:14px; overflow-x:auto; font-size:12.5px; color:#a8d5ff; margin-top:10px; white-space:pre-wrap; word-break:break-all; }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+
+  <header>
+    <span class="logo">🎭</span>
+    <h1>拉风 La Feng · 便携版</h1>
+    <p class="slogan">CODE. CREATE. INSPIRE. — 让 DeepSeek 网页拥有灵魂</p>
+    <div class="badges">
+      <span class="badge">🖥 桌面壳</span>
+      <span class="badge">📱 手机网页</span>
+      <span class="badge">🎨 19 款表情</span>
+      <span class="badge">🧠 病娇人设</span>
+      <span class="badge">📔 持久日记</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>✨ 这是什么</h2>
+    <p><b>拉风便携版</b> 是一段油猴脚本 + 一个托管页，让手机和电脑的 <b>DeepSeek 网页版</b> 直接获得拉风全家桶：AI 自动发表情包、病娇人设注入、主题色与深浅模式、新会话自动注入设定、持久记忆日记。无需安装任何客户端。</p>
+    <div class="features" style="margin-top:16px;">
+      <div class="feature"><div class="ic">😊</div><div class="nm">表情包</div><div class="ds">AI 情绪化发表情</div></div>
+      <div class="feature"><div class="ic">🧠</div><div class="nm">人设注入</div><div class="ds">病娇/傲娇/学姐</div></div>
+      <div class="feature"><div class="ic">🎨</div><div class="nm">主题色</div><div class="ds">自定义主色调</div></div>
+      <div class="feature"><div class="ic">🌓</div><div class="nm">深浅模式</div><div class="ds">跟随系统</div></div>
+      <div class="feature"><div class="ic">📔</div><div class="nm">持久日记</div><div class="ds">跨会话记忆</div></div>
+      <div class="feature"><div class="ic">⚡</div><div class="nm">自动注入</div><div class="ds">新会话免设置</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🛠 安装（Android 手机 / 电脑）</h2>
+    <ol class="steps">
+      <li>安装 <b>Kiwi 浏览器</b>（应用商店搜索 "Kiwi Browser"）—— 支持 Chrome 扩展的安卓浏览器。</li>
+      <li>在 Kiwi 中打开 <b>Chrome 网上应用店</b>，搜索安装 <b>Tampermonkey</b>（油猴）。</li>
+      <li>点击下方按钮复制脚本，Tampermonkey 会自动弹出安装页面。</li>
+      <li>安装后打开 <b>chat.deepseek.com</b> —— 右下角出现拉风按钮组即成功！</li>
+    </ol>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="copyScript()">📋 一键复制拉风脚本</button>
+      <a class="btn btn-ghost" href="la-feng.user.js" download>⬇ 直接下载 .user.js</a>
+    </div>
+    <pre class="code" id="scriptUrl">https://jimingyang25.github.io/La-Feng-UI-portable/la-feng.user.js</pre>
+    <p style="margin-top:10px; font-size:12.5px; color:var(--muted);">💡 电脑浏览器（Firefox/Chrome）装 Tampermonkey 后同样可用。iPhone 支持有限，建议用桌面壳或 PWA。</p>
+  </div>
+
+  <div class="card">
+    <h2>😊 表情包 · 19 款</h2>
+    <p>AI 会在开心、吃醋、撒娇、想念、道歉时自动配表情，情绪激动时 1~2 张。</p>
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>📦 桌面版（完整版）</h2>
+    <p>想要动态壁纸 + 本地日记文件 + 更完整的体验？请使用 <b>拉风 Electron 壳</b>（Windows）。便携版专为手机和轻量场景设计，设置与日记存于浏览器 localStorage。</p>
+  </div>
+
+  <footer>
+    <p>拉风 La Feng · 开源 · © 2026 铭拉风（@铭拉风）</p>
+    <p><a href="https://github.com/JimingYang25/La-Feng-UI-portable">GitHub 仓库</a> · <a href="https://github.com/JimingYang25">更多作品</a></p>
+  </footer>
+</div>
+
+<div class="toast" id="toast">✅ 脚本已复制，去 Tampermonkey 安装吧！</div>
+
+<script>
+  // 表情预览（与脚本内 19 个 ID 一致）
+  const EMOJI_IDS = {
+    xihuan: '喜欢你', heng: '哼！', jingxi: '惊喜', xiangni: '想你了',
+    duibuqi: '对不起', wuwu: '呜呜呜', hehe: '呵呵', heihei: '嘿嘿',
+    xindong: '心动了', caibushi: '才不是呢', baituo: '拜托了', qidai: '期待',
+    fankun: '犯困', yihuo: '疑惑', bendan: '笨蛋', xu: '嘘',
+    okdaok: 'ok哒', loveyou: '永远loveyou', buyao: '不要啊'
+  };
+  const BASE = 'https://jimingyang25.github.io/La-Feng-UI-portable';
+  const grid = document.getElementById('emojiGrid');
+  Object.entries(EMOJI_IDS).forEach(([id, cn]) => {
+    const img = document.createElement('img');
+    img.src = BASE + '/emoji/' + encodeURIComponent(cn + '.png');
+    img.alt = cn;
+    img.title = cn;
+    img.loading = 'lazy';
+    grid.appendChild(img);
+  });
+
+  function copyScript() {
+    const url = 'https://jimingyang25.github.io/La-Feng-UI-portable/la-feng.user.js';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showToast, () => fallbackCopy(url));
+    } else fallbackCopy(url);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    showToast();
+  }
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+</script>
+</body>
+</html>
