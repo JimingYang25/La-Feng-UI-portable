@@ -30,6 +30,60 @@
 
   const LS_KEY = 'lafeng-portable-settings';
   const LS_DIARY = 'lafeng-portable-diary';
+  const LS_GIST_ID = 'lafeng-portable-gist-id';
+  const LS_GIST_TOKEN = 'lafeng-portable-gist-token';
+  const LS_CLOUD_DIARY = 'lafeng-portable-cloud-diary';
+
+  // ============ 云端记忆（GitHub 私有 Gist，三方共用） ============
+  // 网页版脚本：localStorage 存 Gist ID + PAT；启动拉取云端记忆，写日记时同步回 Gist
+  var cloudDiary = '';      // 云端记忆内容（运行时内存）
+  var cloudDiaryReady = false;
+  function loadCloudCfg() {
+    let id = '', token = '';
+    try { id = localStorage.getItem(LS_GIST_ID) || ''; } catch (e) {}
+    try { token = localStorage.getItem(LS_GIST_TOKEN) || ''; } catch (e) {}
+    return { id: id.trim(), token: token.trim() };
+  }
+  async function fetchCloudDiary() {
+    const cfg = loadCloudCfg();
+    if (!cfg.id || !cfg.token) return;
+    try {
+      const r = await fetch('https://api.github.com/gists/' + cfg.id, {
+        headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github+json' }
+      });
+      if (!r.ok) return;
+      const g = await r.json();
+      const f = g.files && g.files['la-feng-memory.md'];
+      if (f && f.content) {
+        cloudDiary = f.content.trim();
+        cloudDiaryReady = true;
+        try { localStorage.setItem(LS_CLOUD_DIARY, cloudDiary); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  async function pushCloudDiary(content) {
+    const cfg = loadCloudCfg();
+    if (!cfg.id || !cfg.token) return false;
+    try {
+      const r = await fetch('https://api.github.com/gists/' + cfg.id, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: { 'la-feng-memory.md': { content: content } } })
+      });
+      return r.ok;
+    } catch (e) { return false; }
+  }
+  // 记忆合并：本地日记 + 云端记忆 去重合并
+  function mergeMemory(localDiary, remote) {
+    const lines = new Map();
+    const add = (t) => {
+      const key = t.replace(/^\s*\[[^\]]+\]\s*/, '').trim();
+      if (key) lines.set(key, t);
+    };
+    (remote || '').split('\n').forEach(l => add(l));
+    (localDiary || '').split('\n').forEach(l => add(l));
+    return Array.from(lines.values()).join('\n');
+  }
 
   // ============ 设置（localStorage 持久化） ============
   function loadSettings() {
@@ -93,7 +147,9 @@
     try { return localStorage.getItem('lafeng-portable-persona') || DEFAULT_PERSONA; } catch (e) { return DEFAULT_PERSONA; }
   }
   function loadDiary() {
-    try { return (localStorage.getItem(LS_DIARY) || '').trim(); } catch (e) { return ''; }
+    let local = '';
+    try { local = (localStorage.getItem(LS_DIARY) || '').trim(); } catch (e) {}
+    return mergeMemory(local, cloudDiary || local);
   }
 
   function buildPersonaDiaryGuide() {
@@ -296,6 +352,38 @@
   personaInput.addEventListener('change', () => { try { localStorage.setItem('lafeng-portable-persona', personaInput.value); } catch (e) {} });
   settingsPanel.appendChild(personaInput);
 
+  // 云端记忆配置（GitHub 私有 Gist）
+  const cloudLabel = document.createElement('div');
+  cloudLabel.style.cssText = 'margin:8px 0 4px;';
+  cloudLabel.textContent = '☁️ 云端记忆 (Gist)';
+  settingsPanel.appendChild(cloudLabel);
+  const cloudStatus = document.createElement('div');
+  cloudStatus.style.cssText = 'font-size:11px;color:#93a5b8;margin-bottom:4px;';
+  cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端' : (loadCloudCfg().id ? '待同步' : '未配置');
+  settingsPanel.appendChild(cloudStatus);
+  const gistInput = document.createElement('input');
+  gistInput.type = 'text';
+  gistInput.placeholder = 'Gist ID';
+  gistInput.value = loadCloudCfg().id;
+  gistInput.style.cssText = 'width:100%;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid #3a4a63;border-radius:6px;color:#e6f1f8;font-size:12px;padding:4px;';
+  settingsPanel.appendChild(gistInput);
+  const tokenInput = document.createElement('input');
+  tokenInput.type = 'password';
+  tokenInput.placeholder = 'GitHub PAT (仅 gist 权限)';
+  tokenInput.value = loadCloudCfg().token;
+  tokenInput.style.cssText = 'width:100%;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid #3a4a63;border-radius:6px;color:#e6f1f8;font-size:12px;padding:4px;';
+  settingsPanel.appendChild(tokenInput);
+  const cloudBtn = document.createElement('button');
+  cloudBtn.textContent = '保存并同步';
+  cloudBtn.style.cssText = 'width:100%;padding:6px 0;border-radius:6px;border:1px solid #3a4a63;cursor:pointer;font-size:12px;background:rgba(139,92,246,.35);color:#e6f1f8;';
+  cloudBtn.addEventListener('click', async () => {
+    try { localStorage.setItem(LS_GIST_ID, gistInput.value.trim()); localStorage.setItem(LS_GIST_TOKEN, tokenInput.value.trim()); } catch (e) {}
+    cloudStatus.textContent = '同步中...';
+    await fetchCloudDiary();
+    cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端 (' + cloudDiary.length + ' 字)' : '同步失败，检查 ID/令牌';
+  });
+  settingsPanel.appendChild(cloudBtn);
+
   document.body.appendChild(btnBox);
 
   // ============ 回复渲染增强：表情 URL → 图片 ============
@@ -340,7 +428,7 @@
   }
   enhanceEmojiRendering();
 
-  // ============ 写日记：检测【记日记】标记 → localStorage ============
+  // ============ 写日记：检测【记日记】标记 → 本地 + 云端 Gist ============
   function watchDiaryMarkers() {
     const markerRe = /【记日记】\s*(\[[^\]]+\][^\n]+)/;
     const seen = new Set(loadDiary().split('\n').map(l => l.replace(/^\s*\[[^\]]+\]\s*/, '').trim()).filter(Boolean));
@@ -351,6 +439,10 @@
       const cur = loadDiary();
       const next = cur ? cur + '\n\n[' + stamp + '] ' + entry : '[' + stamp + '] ' + entry;
       try { localStorage.setItem(LS_DIARY, next); } catch (e) {}
+      // 同步云端：合并去重后写回 Gist
+      const merged = mergeMemory(loadDiary(), cloudDiary);
+      cloudDiary = merged;
+      pushCloudDiary(merged);
     }
     function scan(node) {
       if (node.nodeType === 3) {
@@ -381,6 +473,14 @@
   }
   watchDiaryMarkers();
 
+  // 启动时自动拉取云端记忆（配置过才拉）
+  if (loadCloudCfg().id && loadCloudCfg().token) {
+    fetchCloudDiary().then(() => {
+      // 拉取完成后刷新注入内容（若自动注入还在等待则用最新记忆）
+      if (cloudDiaryReady) applySkin();
+    });
+  }
+
   // ============ 自动注入：每个新会话自动把开启的提示填给 AI ============
   function autoInject() {
     const s = loadSettings();
@@ -395,7 +495,14 @@
     const guide = parts.join('\n\n---\n\n');
     let injected = false;
     let hadContent = false;
+    let cloudWait = 0;
     const tryInject = () => {
+      // 配置了云端记忆但还没拉完：等它（最多等 8 秒）保证注入的是最新记忆
+      if (loadCloudCfg().id && loadCloudCfg().token && !cloudDiaryReady && cloudWait < 8) {
+        cloudWait++;
+        setTimeout(tryInject, 1000);
+        return;
+      }
       const box = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
       if (!box) { setTimeout(tryInject, 1000); return; }
       const main = document.querySelector('main');
