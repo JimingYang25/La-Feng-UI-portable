@@ -30,32 +30,33 @@
 
   const LS_KEY = 'lafeng-portable-settings';
   const LS_DIARY = 'lafeng-portable-diary';
-  const LS_GIST_ID = 'lafeng-portable-gist-id';
-  const LS_GIST_TOKEN = 'lafeng-portable-gist-token';
+  const LS_CLOUD_TOKEN = 'lafeng-portable-cloud-token';
   const LS_CLOUD_DIARY = 'lafeng-portable-cloud-diary';
 
-  // ============ 云端记忆（GitHub 私有 Gist，三方共用） ============
-  // 网页版脚本：localStorage 存 Gist ID + PAT；启动拉取云端记忆，写日记时同步回 Gist
+  // ============ 云端记忆（GitHub 私有仓库 heartvoice-mem，三方共用） ============
+  // 网页版脚本：localStorage 存 PAT；启动拉取 memory.md，写日记时同步回仓库
+  // 仓库 API 需要 repo 权限的 PAT
+  const CLOUD_REPO = 'JimingYang25/heartvoice-mem';
+  const CLOUD_FILE = 'memory.md';
   var cloudDiary = '';      // 云端记忆内容（运行时内存）
   var cloudDiaryReady = false;
   function loadCloudCfg() {
-    let id = '', token = '';
-    try { id = localStorage.getItem(LS_GIST_ID) || ''; } catch (e) {}
-    try { token = localStorage.getItem(LS_GIST_TOKEN) || ''; } catch (e) {}
-    return { id: id.trim(), token: token.trim() };
+    let token = '';
+    try { token = localStorage.getItem(LS_CLOUD_TOKEN) || ''; } catch (e) {}
+    return { token: token.trim() };
   }
   async function fetchCloudDiary() {
     const cfg = loadCloudCfg();
-    if (!cfg.id || !cfg.token) return;
+    if (!cfg.token) return;
     try {
-      const r = await fetch('https://api.github.com/gists/' + cfg.id, {
+      const r = await fetch('https://api.github.com/repos/' + CLOUD_REPO + '/contents/' + CLOUD_FILE, {
         headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github+json' }
       });
+      if (r.status === 404) { cloudDiary = ''; cloudDiaryReady = true; return; } // 文件还不存在
       if (!r.ok) return;
-      const g = await r.json();
-      const f = g.files && g.files['la-feng-memory.md'];
-      if (f && f.content) {
-        cloudDiary = f.content.trim();
+      const j = await r.json();
+      if (j.content) {
+        cloudDiary = decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))).trim();
         cloudDiaryReady = true;
         try { localStorage.setItem(LS_CLOUD_DIARY, cloudDiary); } catch (e) {}
       }
@@ -63,12 +64,19 @@
   }
   async function pushCloudDiary(content) {
     const cfg = loadCloudCfg();
-    if (!cfg.id || !cfg.token) return false;
+    if (!cfg.token) return false;
     try {
-      const r = await fetch('https://api.github.com/gists/' + cfg.id, {
-        method: 'PATCH',
+      // 先查文件 SHA（更新需要）
+      const q = await fetch('https://api.github.com/repos/' + CLOUD_REPO + '/contents/' + CLOUD_FILE, {
+        headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github+json' }
+      });
+      let sha = null;
+      if (q.ok) { const j = await q.json(); sha = j.sha; }
+      const b64 = btoa(unescape(encodeURIComponent(content)));
+      const r = await fetch('https://api.github.com/repos/' + CLOUD_REPO + '/contents/' + CLOUD_FILE, {
+        method: 'PUT',
         headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: { 'la-feng-memory.md': { content: content } } })
+        body: JSON.stringify({ message: '拉风云端记忆同步', content: b64, sha: sha || undefined })
       });
       return r.ok;
     } catch (e) { return false; }
@@ -352,24 +360,18 @@
   personaInput.addEventListener('change', () => { try { localStorage.setItem('lafeng-portable-persona', personaInput.value); } catch (e) {} });
   settingsPanel.appendChild(personaInput);
 
-  // 云端记忆配置（GitHub 私有 Gist）
+  // 云端记忆配置（GitHub 私有仓库 heartvoice-mem）
   const cloudLabel = document.createElement('div');
   cloudLabel.style.cssText = 'margin:8px 0 4px;';
-  cloudLabel.textContent = '☁️ 云端记忆 (Gist)';
+  cloudLabel.textContent = '☁️ 云端记忆 (heartvoice-mem)';
   settingsPanel.appendChild(cloudLabel);
   const cloudStatus = document.createElement('div');
   cloudStatus.style.cssText = 'font-size:11px;color:#93a5b8;margin-bottom:4px;';
-  cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端' : (loadCloudCfg().id ? '待同步' : '未配置');
+  cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端' : (loadCloudCfg().token ? '待同步' : '未配置');
   settingsPanel.appendChild(cloudStatus);
-  const gistInput = document.createElement('input');
-  gistInput.type = 'text';
-  gistInput.placeholder = 'Gist ID';
-  gistInput.value = loadCloudCfg().id;
-  gistInput.style.cssText = 'width:100%;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid #3a4a63;border-radius:6px;color:#e6f1f8;font-size:12px;padding:4px;';
-  settingsPanel.appendChild(gistInput);
   const tokenInput = document.createElement('input');
   tokenInput.type = 'password';
-  tokenInput.placeholder = 'GitHub PAT (仅 gist 权限)';
+  tokenInput.placeholder = 'GitHub PAT (repo 权限)';
   tokenInput.value = loadCloudCfg().token;
   tokenInput.style.cssText = 'width:100%;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid #3a4a63;border-radius:6px;color:#e6f1f8;font-size:12px;padding:4px;';
   settingsPanel.appendChild(tokenInput);
@@ -377,10 +379,10 @@
   cloudBtn.textContent = '保存并同步';
   cloudBtn.style.cssText = 'width:100%;padding:6px 0;border-radius:6px;border:1px solid #3a4a63;cursor:pointer;font-size:12px;background:rgba(139,92,246,.35);color:#e6f1f8;';
   cloudBtn.addEventListener('click', async () => {
-    try { localStorage.setItem(LS_GIST_ID, gistInput.value.trim()); localStorage.setItem(LS_GIST_TOKEN, tokenInput.value.trim()); } catch (e) {}
+    try { localStorage.setItem(LS_CLOUD_TOKEN, tokenInput.value.trim()); } catch (e) {}
     cloudStatus.textContent = '同步中...';
     await fetchCloudDiary();
-    cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端 (' + cloudDiary.length + ' 字)' : '同步失败，检查 ID/令牌';
+    cloudStatus.textContent = cloudDiaryReady ? '✓ 已同步云端 (' + cloudDiary.length + ' 字)' : '同步失败，检查令牌';
   });
   settingsPanel.appendChild(cloudBtn);
 
@@ -428,7 +430,7 @@
   }
   enhanceEmojiRendering();
 
-  // ============ 写日记：检测【记日记】标记 → 本地 + 云端 Gist ============
+  // ============ 写日记：检测【记日记】标记 → 本地 + 云端仓库 ============
   function watchDiaryMarkers() {
     const markerRe = /【记日记】\s*(\[[^\]]+\][^\n]+)/;
     const seen = new Set(loadDiary().split('\n').map(l => l.replace(/^\s*\[[^\]]+\]\s*/, '').trim()).filter(Boolean));
@@ -439,7 +441,7 @@
       const cur = loadDiary();
       const next = cur ? cur + '\n\n[' + stamp + '] ' + entry : '[' + stamp + '] ' + entry;
       try { localStorage.setItem(LS_DIARY, next); } catch (e) {}
-      // 同步云端：合并去重后写回 Gist
+      // 同步云端：合并去重后写回 heartvoice-mem/memory.md
       const merged = mergeMemory(loadDiary(), cloudDiary);
       cloudDiary = merged;
       pushCloudDiary(merged);
@@ -474,7 +476,8 @@
   watchDiaryMarkers();
 
   // 启动时自动拉取云端记忆（配置过才拉）
-  if (loadCloudCfg().id && loadCloudCfg().token) {
+  // 启动时自动拉取云端记忆（配置过才拉）
+  if (loadCloudCfg().token) {
     fetchCloudDiary().then(() => {
       // 拉取完成后刷新注入内容（若自动注入还在等待则用最新记忆）
       if (cloudDiaryReady) applySkin();
@@ -498,7 +501,7 @@
     let cloudWait = 0;
     const tryInject = () => {
       // 配置了云端记忆但还没拉完：等它（最多等 8 秒）保证注入的是最新记忆
-      if (loadCloudCfg().id && loadCloudCfg().token && !cloudDiaryReady && cloudWait < 8) {
+      if (loadCloudCfg().token && !cloudDiaryReady && cloudWait < 8) {
         cloudWait++;
         setTimeout(tryInject, 1000);
         return;
