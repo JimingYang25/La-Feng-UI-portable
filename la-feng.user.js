@@ -182,10 +182,10 @@
     const ed = document.querySelector('[contenteditable="true"]');
     if (ed) {
       ed.focus();
-      ed.textContent = (ed.textContent || '') + text;
+      // 用 execCommand 插入（走原生输入路径，避免直接改 textContent 破坏富文本文档模型导致卡死）
+      document.execCommand('insertText', false, text);
       ed.dispatchEvent(new Event('input', { bubbles: true }));
       ed.dispatchEvent(new Event('change', { bubbles: true }));
-      ed.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'x' }));
       return;
     }
     const ta = document.querySelector('textarea');
