@@ -15,7 +15,8 @@
 
   // ============ 云端资源（GitHub Pages 托管，部署后替换为正式域名） ============
   const ASSET_BASE = 'https://jimingyang25.github.io/La-Feng-UI-portable';
-  const EMOJI_URL = (id) => ASSET_BASE + '/emoji/' + encodeURIComponent(id + '.png');
+  // 注意：文件名为中文（喜欢你.png），必须用中文名拼 URL
+  const EMOJI_URL = (cn) => ASSET_BASE + '/emoji/' + encodeURIComponent(cn + '.png');
 
   // 表情拼音 ID → 中文文件名
   const EMOJI_IDS = {
@@ -187,7 +188,7 @@
   panel.style.cssText = 'position:fixed;right:18px;bottom:120px;z-index:999999;background:rgba(15,25,40,.95);padding:8px;border-radius:12px;max-width:320px;max-height:320px;overflow-y:auto;display:none;flex-wrap:wrap;gap:4px;';
   Object.entries(EMOJI_IDS).forEach(([id, cn]) => {
     const img = document.createElement('img');
-    img.src = EMOJI_URL(id);
+    img.src = EMOJI_URL(cn);
     img.title = cn;
     img.style.cssText = 'width:44px;height:44px;border-radius:8px;cursor:pointer;';
     img.addEventListener('click', () => insertText('![](' + ASSET_BASE + '/emoji/' + encodeURIComponent(cn + '.png') + ')'));
